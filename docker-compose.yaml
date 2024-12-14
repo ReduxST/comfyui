@@ -55,6 +55,8 @@ services:
         # Syncthing
         - ${SYNCTHING_UI_PORT_HOST:-8384}:${SYNCTHING_UI_PORT_HOST:-8384}
         - ${SYNCTHING_TRANSPORT_PORT_HOST:-22999}:${SYNCTHING_TRANSPORT_PORT_HOST:-22999}
+        # Ollama API
+        - ${OLLAMA_PORT_HOST:-11434}:11434
    
     environment:
         # Don't enclose values in quotes
@@ -87,3 +89,8 @@ services:
         - SYNCTHING_TRANSPORT_PORT_HOST=${SYNCTHING_TRANSPORT_PORT_HOST:-22999}
         - SYNCTHING_URL=${SYNCTHING_URL:-}
         #- PROVISIONING_SCRIPT=${PROVISIONING_SCRIPT:-}
+        # Ollama Configuration
+        - OLLAMA_PORT_LOCAL=${OLLAMA_PORT_LOCAL:-11434}
+        - OLLAMA_PORT_HOST=${OLLAMA_PORT_HOST:-11434}
+        - OLLAMA_METRICS_PORT=${OLLAMA_METRICS_PORT:-29188}
+        - OLLAMA_URL=${OLLAMA_URL:-}
