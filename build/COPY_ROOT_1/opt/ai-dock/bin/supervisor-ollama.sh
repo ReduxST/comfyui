@@ -16,14 +16,9 @@ function cleanup() {
 
 function start() {
     source /opt/ai-dock/etc/environment.sh
+    source /opt/ai-dock/bin/venv-set.sh serviceportal
     
     # Wait for Ollama installation to complete
-    while [[ ! -f "/run/ollama_ready" ]]; do
-        printf "Waiting for Ollama installation to complete...\n"
-        sleep 2
-    done
-    
-    # Delay launch until container is ready
     if [[ -f /run/workspace_sync || -f /run/container_config ]]; then
         if [[ ${SERVERLESS,,} != "true" ]]; then
             printf "Waiting for workspace sync...\n"
@@ -70,6 +65,24 @@ function start() {
     printf "%s" "$file_content" > /run/http_ports/$PROXY_PORT
     
     printf "Starting %s...\n" "${SERVICE_NAME}"
+    
+    # Wait for Ollama installation to complete
+    while [[ ! -f "/run/ollama_ready" ]]; do
+        printf "Waiting for Ollama installation to complete...\n"
+        if [[ ${SERVERLESS,,} != "true" ]]; then
+            "$SERVICEPORTAL_VENV_PYTHON" /opt/ai-dock/fastapi/logviewer/main.py \
+                -p $LISTEN_PORT \
+                -r 5 \
+                -s "${SERVICE_NAME}" \
+                -t "Waiting for Ollama installation..." &
+            fastapi_pid=$!
+            sleep 2
+            kill $fastapi_pid &
+            wait -n
+        else
+            sleep 2
+        fi
+    done
     
     # Set Ollama environment variables
     export OLLAMA_HOST="0.0.0.0:${LISTEN_PORT}"
