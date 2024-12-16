@@ -18,31 +18,11 @@ function start() {
     source /opt/ai-dock/etc/environment.sh
     source /opt/ai-dock/bin/venv-set.sh serviceportal
     
-    # Wait for Ollama installation to complete
-    if [[ -f /run/workspace_sync || -f /run/container_config ]]; then
-        if [[ ${SERVERLESS,,} != "true" ]]; then
-            printf "Waiting for workspace sync...\n"
-            fuser -k -SIGKILL ${LISTEN_PORT}/tcp > /dev/null 2>&1 &
-            wait -n
-            "$SERVICEPORTAL_VENV_PYTHON" /opt/ai-dock/fastapi/logviewer/main.py \
-                -p $LISTEN_PORT \
-                -r 5 \
-                -s "${SERVICE_NAME}" \
-                -t "Preparing ${SERVICE_NAME}" &
-            fastapi_pid=$!
-            
-            while [[ -f /run/workspace_sync || -f /run/container_config ]]; do
-                sleep 1
-            done
-            
-            kill $fastapi_pid &
-            wait -n
-        else
-            printf "Waiting for workspace symlinks and pre-flight checks...\n"
-            while [[ -f /run/workspace_sync || -f /run/container_config ]]; do
-                sleep 1
-            done
-        fi
+    # Exit with code 125 if Ollama is not installed yet
+    # Supervisor will treat this as expected and won't restart
+    if [[ ! -f "/run/ollama_installed" ]]; then
+        printf "Waiting for Ollama installation to complete...\n"
+        exit 125
     fi
     
     if [[ ! -v OLLAMA_PORT || -z $OLLAMA_PORT ]]; then
@@ -65,24 +45,6 @@ function start() {
     printf "%s" "$file_content" > /run/http_ports/$PROXY_PORT
     
     printf "Starting %s...\n" "${SERVICE_NAME}"
-    
-    # Wait for Ollama installation to complete
-    while [[ ! -f "/run/ollama_ready" ]]; do
-        printf "Waiting for Ollama installation to complete...\n"
-        if [[ ${SERVERLESS,,} != "true" ]]; then
-            "$SERVICEPORTAL_VENV_PYTHON" /opt/ai-dock/fastapi/logviewer/main.py \
-                -p $LISTEN_PORT \
-                -r 5 \
-                -s "${SERVICE_NAME}" \
-                -t "Waiting for Ollama installation..." &
-            fastapi_pid=$!
-            sleep 2
-            kill $fastapi_pid &
-            wait -n
-        else
-            sleep 2
-        fi
-    done
     
     # Set Ollama environment variables
     export OLLAMA_HOST="0.0.0.0:${LISTEN_PORT}"

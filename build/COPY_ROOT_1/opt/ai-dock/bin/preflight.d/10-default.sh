@@ -6,26 +6,24 @@ function preflight_main() {
     preflight_update_comfyui
     printf "%s" "${COMFYUI_ARGS}" > /etc/comfyui_args.conf
     
-    # Install Ollama
+    # Install Ollama with proper verification
     printf "Installing Ollama...\n"
-    curl -fsSL https://ollama.com/install.sh | sh
-    
-    # Create necessary directories
-    mkdir -p /opt/ollama_service
-    
-    # Initialize Ollama and pull default model
-    printf "Pulling minicpm-v model for ollama\n"
-    ollama serve &
-    OLLAMA_PID=$!
-    sleep 5  # Give Ollama time to start
-    ollama pull minicpm-v  # Optional: Pull a default model
-    
-    # Stop the temporary Ollama instance
-    kill $OLLAMA_PID
-    wait $OLLAMA_PID
-    
-    # Signal Ollama is ready
-    touch /run/ollama_ready
+    if curl -fsSL https://ollama.com/install.sh | sh; then
+        # Verify installation
+        if [ -f "/usr/local/bin/ollama" ]; then
+            printf "Ollama installed successfully\n"
+            # Create necessary directories
+            mkdir -p /opt/ollama_service
+            # Signal that Ollama is installed and ready for supervisor
+            touch /run/ollama_installed
+        else
+            printf "ERROR: Ollama installation failed - binary not found\n"
+            exit 1
+        fi
+    else
+        printf "ERROR: Ollama installation script failed\n"
+        exit 1
+    fi
 }
 
 function preflight_serverless() {
